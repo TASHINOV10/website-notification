@@ -67,6 +67,13 @@ def fetch_page(url: str) -> str:
     return resp.text
 
 
+def _element_price_text(el) -> str:
+    # No separator: many sites split a price into adjacent spans for styling,
+    # e.g. <span>189<span class="precision">,00</span></span> -- inserting a
+    # space here would break "189" and ",00" apart and truncate the decimals.
+    return el.get("content") or el.get_text(strip=True)
+
+
 def extract_price(html: str, css_selector: str | None = None) -> float:
     soup = BeautifulSoup(html, "lxml")
 
@@ -74,16 +81,14 @@ def extract_price(html: str, css_selector: str | None = None) -> float:
         el = soup.select_one(css_selector)
         if el is None:
             raise ScrapeError(f"CSS selector {css_selector!r} matched nothing")
-        text = el.get("content") or el.get_text(" ", strip=True)
-        return _clean_price_text(text)
+        return _clean_price_text(_element_price_text(el))
 
     for selector in FALLBACK_SELECTORS:
         el = soup.select_one(selector)
         if el is None:
             continue
-        text = el.get("content") or el.get_text(" ", strip=True)
         try:
-            return _clean_price_text(text)
+            return _clean_price_text(_element_price_text(el))
         except ScrapeError:
             continue
 
