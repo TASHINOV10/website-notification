@@ -5,20 +5,26 @@ from bs4 import BeautifulSoup
 
 from app.config import settings
 
-# Matches things like $1,299.99 / £49.00 / 49,99 EUR / 1299 (no decimals)
+# Matches things like $1,299.99 / £49.00 / 49,99 EUR / 1 299,99 Lei / 1299 (no decimals).
+# Thousands separators seen in the wild: comma, dot, or a plain space (e.g. Moldovan/
+# Romanian "1 299,99 Lei").
 PRICE_RE = re.compile(
-    r"(?:[\$£€]|USD|EUR|GBP)?\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\b",
+    r"(?:[\$£€]|USD|EUR|GBP)?\s?(\d+(?:[ .,]\d{3})*(?:[.,]\d{2})?)\b",
     re.IGNORECASE,
 )
 
-# Where to look, in order, when no css_selector is provided.
+# Where to look, in order, when no css_selector is provided. The `*=` operator is
+# a substring match (soupsieve's equivalent of SQL's ILIKE '%...%') and the trailing
+# `i` flag makes it case-insensitive -- together they catch id/class values with a
+# per-product suffix, e.g. id="product-price-674978".
 FALLBACK_SELECTORS = [
     '[itemprop="price"]',
     'meta[property="product:price:amount"]',
     'meta[property="og:price:amount"]',
     '.price',
     '#price',
-    '[class*="price"]',
+    '[id*="price" i]',
+    '[class*="price" i]',
 ]
 
 
@@ -31,7 +37,7 @@ def _clean_price_text(text: str) -> float:
     if not match:
         raise ScrapeError(f"Could not find a price in text: {text!r}")
 
-    raw = match.group(1)
+    raw = match.group(1).replace(" ", "")
     # Normalize "1.299,99" or "1,299.99" style thousand/decimal separators.
     if "," in raw and "." in raw:
         if raw.rfind(",") > raw.rfind("."):
