@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 
+// Sites we've tuned a working price selector for. Add a new one here as you
+// go, in the same "www.example.com" text form -- no logos, see disclaimer below.
+const SUPPORTED_SITES = ["www.ozone.bg", "www.mobile.bg", "www.cars.bg"];
+
 const FEATURES = [
   {
     title: "Track any listing",
@@ -45,6 +49,22 @@ export default function Landing() {
             View dashboard
           </Link>
         </div>
+      </section>
+
+      <section className="supported-sites">
+        <p className="supported-sites-label">Tuned selectors for</p>
+        <div className="marquee">
+          <div className="marquee-track">
+            {[...SUPPORTED_SITES, ...SUPPORTED_SITES].map((site, i) => (
+              <span className="marquee-item" key={`${site}-${i}`}>
+                {site}
+              </span>
+            ))}
+          </div>
+        </div>
+        <p className="supported-sites-disclaimer">
+          Not affiliated with or endorsed by the listed websites.
+        </p>
       </section>
 
       <section className="features">
