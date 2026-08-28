@@ -48,20 +48,56 @@ frontend/           React (Vite) SPA, talks to the backend over HTTP
 docker-compose.yml   postgres + backend + frontend, for local dev
 ```
 
-## Running locally (Docker)
+## Local development (no Docker)
+
+Requirements: Python 3.11+, Node 18+, a local Postgres server running.
+
+**1. Database**
+
+Create the role/database the backend expects (defaults: user `postgres`, password
+`postgres`, db `pricewatch` — override via `POSTGRES_USER`/`POSTGRES_PASSWORD`/
+`POSTGRES_DB` env vars if you want different values):
 
 ```bash
-cp .env.example .env
-# edit .env with real SMTP credentials if you want actual emails
+# Debian/Ubuntu (postgres package installed via apt):
+sudo -u postgres ./scripts/setup_local_db.sh
 
-docker compose up --build
+# macOS (Homebrew postgres, `brew services start postgresql`):
+./scripts/setup_local_db.sh
 ```
 
-- Frontend: http://localhost:3000
-- Backend API docs (Swagger): http://localhost:8000/docs
-- Postgres: localhost:5432
+This is idempotent — safe to re-run.
 
-Add a watch from the UI, or directly against the API:
+**2. Backend**
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # defaults already point at localhost:5432/pricewatch
+uvicorn app.main:app --reload
+```
+
+- API: http://localhost:8000
+- Swagger docs: http://localhost:8000/docs
+
+On startup it creates its own tables (no migrations yet) and starts the price-check
+scheduler in-process.
+
+**3. Frontend**
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+cp .env.example .env   # defaults to VITE_API_URL=http://localhost:8000
+npm run dev
+```
+
+- App: http://localhost:3000 (landing page at `/`, dashboard at `/app`)
+
+Add a watch from the UI at http://localhost:3000/app/new, or directly against the API:
 
 ```bash
 curl -X POST http://localhost:8000/watches \
@@ -75,32 +111,24 @@ curl -X POST http://localhost:8000/watches \
   }'
 ```
 
-## Running without Docker
+SMTP is optional for local testing — without it configured, checks and price history
+still work, email sending just fails (logged, doesn't crash anything).
 
-**Backend**
+## Running with Docker (for later)
+
+Once everything above is confirmed working locally, `docker-compose.yml` wires the same
+three services together in containers:
+
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-export DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/pricewatch
-uvicorn app.main:app --reload
+cp .env.example .env
+docker compose up --build
 ```
 
-**Frontend**
-```bash
-cd frontend
-npm install
-npm run dev   # Vite dev server on http://localhost:3000
-```
+- Frontend: http://localhost:3000 · Backend: http://localhost:8000 · Postgres: 5432
 
-By default the app talks to `http://localhost:8000`. To point it elsewhere in dev, set
-`VITE_API_URL` before running `npm run dev` (Vite env vars are read at build/dev-server
-start time). In a built/production run (`npm run build && npm start`), the API URL is
-instead read at runtime from `PUBLIC_API_URL` — see `server.js` — so the same built
-image can be pointed at different backends without rebuilding.
-
-You'll need a local Postgres running with a `pricewatch` database (or point
-`DATABASE_URL` at whatever instance you have).
+Note the frontend reads its backend URL from `PUBLIC_API_URL` at *runtime* (see
+`frontend/server.js`), not at build time — that's what lets the same built image move
+between environments later without a rebuild.
 
 ## Notes / known limitations (MVP)
 
