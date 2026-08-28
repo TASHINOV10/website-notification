@@ -18,8 +18,12 @@ class Settings(BaseSettings):
     default_check_interval_minutes: int = 60
 
     request_timeout_seconds: int = 15
+    # A self-identifying bot UA (e.g. "PriceWatchBot/1.0") gets flat-out 403'd by
+    # sites like OLX that block known bots -- a normal browser UA is what lets the
+    # fetch through.
     user_agent: str = (
-        "Mozilla/5.0 (compatible; PriceWatchBot/1.0; +https://example.com/bot)"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     )
 
 
