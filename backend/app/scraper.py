@@ -5,26 +5,17 @@ from bs4 import BeautifulSoup
 
 from app.config import settings
 
-# Matches things like $1,299.99 / £49.00 / 49,99 EUR / 1 299,99 Lei / 1299 (no decimals).
-# Thousands separators seen in the wild: comma, dot, or a plain space (e.g. Moldovan/
-# Romanian "1 299,99 Lei").
 PRICE_RE = re.compile(
     r"(?:[\$£€]|USD|EUR|GBP)?\s?(\d+(?:[ .,]\d{3})*(?:[.,]\d{2})?)\b",
     re.IGNORECASE,
 )
 
-# Where to look, in order, when no css_selector is provided. The `*=` operator is
-# a substring match (soupsieve's equivalent of SQL's ILIKE '%...%') and the trailing
-# `i` flag makes it case-insensitive -- together they catch id/class values with a
-# per-product suffix, e.g. id="product-price-674978".
 FALLBACK_SELECTORS = [
-    '[itemprop="price"]',
-    'meta[property="product:price:amount"]',
-    'meta[property="og:price:amount"]',
-    '.price',
-    '#price',
-    '[id*="price" i]',
-    '[class*="price" i]',
+    '[id^="product-price-"]', #ww.ozone.bg
+    'body > div.ad2023 > div.right > div > div > div.Price', #www.mobile.bg
+    '#main-content > div > div:nth-child(1) > div > div.offer-price > div > div:nth-child(1)', #www.cars.bg
+    'body > div:nth-child(2) > div.ad2023 > div.left > div.adPrice > div.price > div.cena', #www.imot.bg
+    '#mainContent > div > div.css-118kolg > div:nth-child(3) > div.css-1bcde92 > div:nth-child(2) > div > div.css-1bz5rm8 > div > div > h3' #www.olx.bg
 ]
 
 
@@ -74,9 +65,7 @@ def fetch_page(url: str) -> str:
 
 
 def _element_price_text(el) -> str:
-    # No separator: many sites split a price into adjacent spans for styling,
-    # e.g. <span>189<span class="precision">,00</span></span> -- inserting a
-    # space here would break "189" and ",00" apart and truncate the decimals.
+
     return el.get("content") or el.get_text(strip=True)
 
 
