@@ -6,7 +6,8 @@ tracking.
 
 ## Stack
 
-- **Frontend**: Node.js + Express + EJS (server-rendered, no build step)
+- **Frontend**: React (Vite), a landing page plus a small dashboard app, served in
+  production by a tiny Express static server
 - **Backend**: FastAPI (REST API, scraping, scheduling, email notifications)
 - **DB**: PostgreSQL
 - **Scheduler**: APScheduler running inside the FastAPI process (polls every
@@ -37,24 +38,66 @@ backend/            FastAPI app
     notifier.py            SMTP email sending
     scheduler.py             periodic job that checks due watches
     routers/watches.py        CRUD + manual "check now" endpoint
-frontend/           Express + EJS UI, talks to the backend over HTTP
+frontend/           React (Vite) SPA, talks to the backend over HTTP
+  src/
+    App.jsx           routes: "/" landing, "/app" dashboard, "/app/new", "/app/watches/:id"
+    pages/             Landing, Dashboard, NewWatch, WatchDetail
+    api.js              fetch wrapper, reads the API base from runtime config
+  server.js           production static file server; also serves /config.js so the
+                       backend URL can be set per-deployment without rebuilding
 docker-compose.yml   postgres + backend + frontend, for local dev
 ```
 
-## Running locally (Docker)
+## Local development (no Docker)
+
+Requirements: Python 3.11+, Node 18+, a local Postgres server running.
+
+**1. Database**
+
+Create the role/database the backend expects (defaults: user `postgres`, password
+`postgres`, db `pricewatch` — override via `POSTGRES_USER`/`POSTGRES_PASSWORD`/
+`POSTGRES_DB` env vars if you want different values):
 
 ```bash
-cp .env.example .env
-# edit .env with real SMTP credentials if you want actual emails
+# Debian/Ubuntu (postgres package installed via apt):
+sudo -u postgres ./scripts/setup_local_db.sh
 
-docker compose up --build
+# macOS (Homebrew postgres, `brew services start postgresql`):
+./scripts/setup_local_db.sh
 ```
 
-- Frontend: http://localhost:3000
-- Backend API docs (Swagger): http://localhost:8000/docs
-- Postgres: localhost:5432
+This is idempotent — safe to re-run.
 
-Add a watch from the UI, or directly against the API:
+**2. Backend**
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # defaults already point at localhost:5432/pricewatch
+uvicorn app.main:app --reload
+```
+
+- API: http://localhost:8000
+- Swagger docs: http://localhost:8000/docs
+
+On startup it creates its own tables (no migrations yet) and starts the price-check
+scheduler in-process.
+
+**3. Frontend**
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+cp .env.example .env   # defaults to VITE_API_URL=http://localhost:8000
+npm run dev
+```
+
+- App: http://localhost:3000 (landing page at `/`, dashboard at `/app`)
+
+Add a watch from the UI at http://localhost:3000/app/new, or directly against the API:
 
 ```bash
 curl -X POST http://localhost:8000/watches \
@@ -68,26 +111,24 @@ curl -X POST http://localhost:8000/watches \
   }'
 ```
 
-## Running without Docker
+SMTP is optional for local testing — without it configured, checks and price history
+still work, email sending just fails (logged, doesn't crash anything).
 
-**Backend**
+## Running with Docker (for later)
+
+Once everything above is confirmed working locally, `docker-compose.yml` wires the same
+three services together in containers:
+
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-export DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/pricewatch
-uvicorn app.main:app --reload
+cp .env.example .env
+docker compose up --build
 ```
 
-**Frontend**
-```bash
-cd frontend
-npm install
-BACKEND_URL=http://localhost:8000 npm run dev
-```
+- Frontend: http://localhost:3000 · Backend: http://localhost:8000 · Postgres: 5432
 
-You'll need a local Postgres running with a `pricewatch` database (or point
-`DATABASE_URL` at whatever instance you have).
+Note the frontend reads its backend URL from `PUBLIC_API_URL` at *runtime* (see
+`frontend/server.js`), not at build time — that's what lets the same built image move
+between environments later without a rebuild.
 
 ## Notes / known limitations (MVP)
 
