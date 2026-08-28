@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PriceWatch</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>PriceWatch</h1>
+    <a class="btn" href="/">&larr; Back</a>
+  </header>
+
+  <main>
+    <% if (error) { %>
+      <div class="alert"><%= error %></div>
+    <% } else { %>
+      <h2><%= watch.name || watch.url %></h2>
+      <p class="muted"><a href="<%= watch.url %>" target="_blank" rel="noopener"><%= watch.url %></a></p>
+
+      <div class="details">
+        <div><strong>Current price:</strong> <%= watch.last_price != null ? watch.last_price : '—' %></div>
+        <div><strong>Notify:</strong> <%= watch.notify_email %></div>
+        <div><strong>Interval:</strong> every <%= watch.check_interval_minutes %> min</div>
+        <div><strong>Last checked:</strong> <%= watch.last_checked_at ? new Date(watch.last_checked_at).toLocaleString() : 'never' %></div>
+        <% if (watch.last_error) { %>
+          <div class="error-text"><strong>Last error:</strong> <%= watch.last_error %></div>
+        <% } %>
+      </div>
+
+      <div class="actions">
+        <form method="post" action="/watches/<%= watch.id %>/check">
+          <button class="btn btn-primary" type="submit">Check now</button>
+        </form>
+        <form method="post" action="/watches/<%= watch.id %>/delete" onsubmit="return confirm('Delete this watch?');">
+          <button class="btn btn-danger" type="submit">Delete</button>
+        </form>
+      </div>
+
+      <h3>Price history</h3>
+      <% if (watch.price_history.length === 0) { %>
+        <p class="empty">No history yet.</p>
+      <% } else { %>
+        <table class="watch-table">
+          <thead><tr><th>Price</th><th>Checked at</th></tr></thead>
+          <tbody>
+            <% watch.price_history.slice().reverse().forEach(p => { %>
+              <tr>
+                <td><%= p.price %></td>
+                <td><%= new Date(p.checked_at).toLocaleString() %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    <% } %>
+  </main>
+</body>
+</html>
