@@ -2,15 +2,20 @@
   "name": "pricewatch-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Web UI for PriceWatch, talks to the FastAPI backend",
-  "main": "src/server.js",
+  "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.21.0",
-    "ejs": "^3.1.10",
-    "morgan": "^1.10.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8"
   }
 }

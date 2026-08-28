@@ -6,7 +6,8 @@ tracking.
 
 ## Stack
 
-- **Frontend**: Node.js + Express + EJS (server-rendered, no build step)
+- **Frontend**: React (Vite), a landing page plus a small dashboard app, served in
+  production by a tiny Express static server
 - **Backend**: FastAPI (REST API, scraping, scheduling, email notifications)
 - **DB**: PostgreSQL
 - **Scheduler**: APScheduler running inside the FastAPI process (polls every
@@ -37,7 +38,13 @@ backend/            FastAPI app
     notifier.py            SMTP email sending
     scheduler.py             periodic job that checks due watches
     routers/watches.py        CRUD + manual "check now" endpoint
-frontend/           Express + EJS UI, talks to the backend over HTTP
+frontend/           React (Vite) SPA, talks to the backend over HTTP
+  src/
+    App.jsx           routes: "/" landing, "/app" dashboard, "/app/new", "/app/watches/:id"
+    pages/             Landing, Dashboard, NewWatch, WatchDetail
+    api.js              fetch wrapper, reads the API base from runtime config
+  server.js           production static file server; also serves /config.js so the
+                       backend URL can be set per-deployment without rebuilding
 docker-compose.yml   postgres + backend + frontend, for local dev
 ```
 
@@ -83,8 +90,14 @@ uvicorn app.main:app --reload
 ```bash
 cd frontend
 npm install
-BACKEND_URL=http://localhost:8000 npm run dev
+npm run dev   # Vite dev server on http://localhost:3000
 ```
+
+By default the app talks to `http://localhost:8000`. To point it elsewhere in dev, set
+`VITE_API_URL` before running `npm run dev` (Vite env vars are read at build/dev-server
+start time). In a built/production run (`npm run build && npm start`), the API URL is
+instead read at runtime from `PUBLIC_API_URL` — see `server.js` — so the same built
+image can be pointed at different backends without rebuilding.
 
 You'll need a local Postgres running with a `pricewatch` database (or point
 `DATABASE_URL` at whatever instance you have).
