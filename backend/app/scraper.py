@@ -58,7 +58,13 @@ def fetch_page(url: str) -> str:
     try:
         resp = requests.get(
             url,
-            headers={"User-Agent": settings.user_agent},
+            # Accept/Accept-Language alongside the UA -- a bare UA with none of a
+            # browser's other usual headers is itself a bot tell some sites 403 on.
+            headers={
+                "User-Agent": settings.user_agent,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
             timeout=settings.request_timeout_seconds,
         )
         resp.raise_for_status()
