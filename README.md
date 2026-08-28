@@ -50,31 +50,37 @@ docker-compose.yml   postgres + backend + frontend, for local dev
 
 ## Local development (no Docker)
 
-Requirements: Python 3.11+, Node 18+, a local Postgres server running.
+Requirements: Python 3.11+, Node 18+, a Postgres server already running locally (the
+official Windows installer, Postgres.app/Homebrew on macOS, or `apt install postgresql`
+on Linux all work — whatever admin user/password you set up during that install is what
+goes in `DATABASE_URL` below).
 
-**1. Database**
-
-Create the role/database the backend expects (defaults: user `postgres`, password
-`postgres`, db `pricewatch` — override via `POSTGRES_USER`/`POSTGRES_PASSWORD`/
-`POSTGRES_DB` env vars if you want different values):
-
-```bash
-# Debian/Ubuntu (postgres package installed via apt):
-sudo -u postgres ./scripts/setup_local_db.sh
-
-# macOS (Homebrew postgres, `brew services start postgresql`):
-./scripts/setup_local_db.sh
-```
-
-This is idempotent — safe to re-run.
-
-**2. Backend**
+**1. Backend**
 
 ```bash
 cd backend
-python3 -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+# macOS/Linux: source .venv/bin/activate
+# Windows (PowerShell): .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cp .env.example .env   # defaults already point at localhost:5432/pricewatch
+cp .env.example .env   # Windows: copy .env.example .env
+```
+
+Edit `backend/.env` so `DATABASE_URL` matches your local Postgres admin user/password
+(the default `postgres:postgres@localhost:5432` only works if that's actually what you
+set up). Then create the database itself — this is the step that's easy to miss, and
+what throws `database "pricewatch" does not exist` if skipped:
+
+```bash
+python scripts/setup_local_db.py
+```
+
+This only creates the database (assumes the role in `DATABASE_URL` already exists,
+which is true for a normal Postgres install) and is safe to re-run.
+
+Now start the API:
+
+```bash
 uvicorn app.main:app --reload
 ```
 
@@ -84,7 +90,7 @@ uvicorn app.main:app --reload
 On startup it creates its own tables (no migrations yet) and starts the price-check
 scheduler in-process.
 
-**3. Frontend**
+**2. Frontend**
 
 In a second terminal:
 
